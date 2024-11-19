@@ -1,0 +1,24 @@
+1. Pastikan ada tabel 'lplpo' dan stok_obat'
+
+
+
+2. Import yang diperlukan di tabel 'stok_obat' lalu jika memakai trigger-trigger yang ada di folder 'trigger' maka beberapa data di tabel 'lplpo' akan otomatis masuk
+
+
+
+3. Buat tabel baru 'temp_lplpo' dengan cara memasukkan kodingan berikut di tab 'SQL':
+
+CREATE TABLE temp_lplpo LIKE lplpo;
+
+
+
+4. Import yang diperlukan di tabel 'temp_lplpo'
+
+
+
+5. Masukkan kodingan berikut di tab 'SQL':
+
+UPDATE lplpo 
+JOIN temp_lplpo ON lplpo.NAMA_OBAT = temp_lplpo.NAMA_OBAT AND lplpo.tanggal = temp_lplpo.tanggal
+SET lplpo.STOK_AWAL = temp_lplpo.STOK_AWAL,
+    lplpo.PERMINTAAN = temp_lplpo.PERMINTAAN;

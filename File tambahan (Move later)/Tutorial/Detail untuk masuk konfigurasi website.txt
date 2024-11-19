@@ -1,0 +1,15 @@
+156.67.218.63 (port 22)
+
+Hostname: srv527722.hstgr.cloud
+Username SSH: root
+Password SSH: Rahasiah881
+Port: 22
+
+Akses SSH: ssh root@156.67.218.63
+
+The new ssh-ed25519 key fingerprint is:
+
+ssh-ed25519 255 SHA256:EoJYarr+TmG3jRtZ/CsmWcP0WNsrG8QCpiUyAioWWeo
+
+
+A	@	0	84.32.84.32	50

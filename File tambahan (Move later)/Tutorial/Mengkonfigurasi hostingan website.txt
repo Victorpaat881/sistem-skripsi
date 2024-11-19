@@ -1,0 +1,185 @@
+1. Update ke Linux ubuntu
+apt update
+
+2. Install Apache
+apt install apache2
+
+3. Install versi PHP yang benar dan ekstensinya (module)
+sudo apt install software-properties-common (Hanya perlu jika belum terinstall atau belum terupdate ke paling baru)
+
+sudo add-apt-repository ppa:ondrej/php
+
+sudo apt install php8.2 php8.2-bcmath php8.2-bz2 php8.2-curl php8.2-dom php8.2-gd php8.2-intl php8.2-mbstring php8.2-mysqli php8.2-mysqlnd php8.2-pdo-mysql php8.2-pdo-sqlite php8.2-simplexml php8.2-xml php8.2-xmlreader php8.2-xmlwriter php8.2-zip
+
+4. Install Composer
+sudo apt install composer
+
+5. Kirim folder puskesmas ke /var/www/html menggunakan FileZilla
+
+6. edit konfigurasi Apache dengan menjalankan perintah berikut
+sudo nano /etc/apache2/sites-available/000-default.conf
+
+Lalu berikut konfigurasinya (Hanya konfigurasi yang penting):
+<VirtualHost *:80>
+        ServerName lansotpuskess.site
+        ServerAdmin webmaster@localhost
+        ServerAlias www.lansotpuskess.site
+        DocumentRoot /var/www/html/Puskesmas/public
+        <Directory “/var/www/html/Puskesmas”>
+              Options Indexes FollowSymLinks MultiViews
+              AllowOverride All
+              Require all granted
+              Order allow,deny
+              Allow from all
+        </Directory>
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
+Tekan tombol CRTL+O untuk menyimpan perubahan lalu tekan CRTL+X untuk Kembali ke terminal
+
+7. Aktifkan mod rewrite dan restart service apache2
+sudo a2enmod rewrite systemctl restart apache2
+
+8. edit konfigurasi BaseURL di .env dan yang ada di config CI4 APP dengan menjalankan perintah berikut:
+untuk .env:
+sudo nano /var/www/html/Puskesmas/.env
+
+untuk App.php:
+sudo nano /var/www/html/Puskesmas/app/Config/App.php
+
+9. install MySQL
+sudo apt install mysql-server
+sudo mysql_secure_installation (Lalu tekan n lalu y lalu y lalu y lalu y)
+
+10. Atur databasenya
+sudo mysql -u root -p (Lalu masukkan password SSH untuk masuk MySQL)
+jika tidak ada password silahkan buat pake ini:
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'new_password'; (Jangan pake password dengan karakter khusus. contoh: @#$!%)
+FLUSH PRIVILEGES;
+exit; (keluar MySQL)
+sudo systemctl restart MySQL
+
+
+CREATE DATABASE puskesmas;
+
+exit; (keluar MySQL)
+
+sudo mysql -u root -p puskesmas < /var/www/html/Puskesmas/puskesmas.sql
+
+
+Jika ingin memastikan jika sudah terimport dengan benar:
+(Lalu masuk MySQL lagi)
+
+USE puskesmas;
+
+SHOW TABLES;
+
+11. Pada file php.ini hapus ";" pada ektensi yang di butuhkan atau lebih gampang ikut saja yang ada di xampp
+sudo nano /etc/php/8.2/cli/php.ini
+Tekan tombol CRTL+O untuk menyimpan perubahan lalu tekan CRTL+X untuk Kembali ke terminal
+sudo systemctl restart apache2
+
+
+12. Hubungkan dengan domain lansotpuskess.site
+Masuk ke pengaturan domain. Masuk ke tab "DNS/Nameserver" lalu Pada DNS record ganti konten dari tipe A yang sudah ada dengan IP VPS. Dan untuk TTL nya buat jadi 3600. lalu tunggu beberapa saat untuk domain bisa terhubung dengan server VPS
+
+
+13. Tambahkan SSL pada domain
+sudo apt update
+sudo apt install certbot python3-certbot-apache
+sudo certbot --apache -d lansotpuskess.site -d www.lansotpuskess.site
+echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo tee -a /etc/crontab > /dev/null (Hanya untuk memperbarui SSL secara otomatis setiap sertifikat Let’s Encrypt kadaluarsa yaitu 90 hari)
+
+pastikan di /etc/apache2/sites-available/ ada configurasi khusus untuk SSL seperti "000-default-le-ssl.conf" lalu masukkan kodingan berikut di dalamnya
+
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+        ServerName lansotpuskess.site
+        ServerAdmin webmaster@localhost
+        ServerAlias www.lansotpuskess.site
+        DocumentRoot /var/www/html/Puskesmas/public
+        <Directory “/var/www/html/Puskesmas”>
+            Options Indexes FollowSymLinks
+            AllowOverride All
+            Require all granted
+        </Directory>
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+Include /etc/letsencrypt/options-ssl-apache.conf
+SSLCertificateFile /etc/letsencrypt/live/lansotpuskess.site/fullchain.pem
+SSLCertificateKeyFile /etc/letsencrypt/live/lansotpuskess.site/privkey.pem
+</VirtualHost>
+</IfModule>
+
+
+Pastikan configurasinya sudah aktif
+sudo a2ensite 000-default.conf
+sudo a2ensite 000-default-le-ssl.conf
+
+lalu restart server apache
+systemctl reload apache2
+
+14. Atur konfigurasi apache2
+sudo nano /etc/apache2/apache2.conf
+
+cari yang tertulis:
+<Directory /var/www/>
+   Options Indexes FollowSymLinks
+   AllowOverride none
+   Require all granted
+</Directory>
+
+lalu ganti menjadi:
+<Directory /var/www/>
+   Options Indexes FollowSymLinks
+   AllowOverride All
+   Require all granted
+</Directory>
+
+lalu restart apache
+sudo systemctl restart apache2.service
+
+
+
+15. Hapus trigger 'Persediaan Insert', 'Persediaan Update', 'Sisa Stok Insert', 'Sisa Stok Update' lalu tambahkan lagi di my sql (Ini akan memperbaiki masalah tambah dan ubah data dari stok obat)
+ 
+sudo mysql -u root -p (Lalu masukkan password)
+
+use puskesmas;
+
+(Hapus triggernya)
+DROP TRIGGER IF EXISTS `Persediaan Insert`;
+DROP TRIGGER IF EXISTS `Persediaan Update`;
+DROP TRIGGER IF EXISTS `Sisa Stok Insert`;
+DROP TRIGGER IF EXISTS `Sisa Stok Update`;
+
+lalu jalankan perintah berikut di MySQL:
+DELIMITER $$
+CREATE TRIGGER `Persediaan Insert` BEFORE INSERT ON `lplpo` FOR EACH ROW BEGIN
+  SET NEW.PERSEDIAAN = NEW.STOK_AWAL + NEW.PENERIMAAN;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `Persediaan Update` BEFORE UPDATE ON `lplpo` FOR EACH ROW BEGIN
+  SET NEW.PERSEDIAAN = NEW.STOK_AWAL + NEW.PENERIMAAN;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `Sisa Stok Insert` BEFORE INSERT ON `lplpo` FOR EACH ROW BEGIN
+  SET NEW.SISA_STOK = NEW.PERSEDIAAN - NEW.PEMAKAIAN;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `Sisa Stok Update` BEFORE UPDATE ON `lplpo` FOR EACH ROW BEGIN
+  SET NEW.SISA_STOK = NEW.PERSEDIAAN - NEW.PEMAKAIAN;
+END
+$$
+
+(Pilih paste anyway jika ada peringatan)
+
+lalu pastikan triggernya sudah ada dengan menjalankan yang berikut:
+SHOW TRIGGERS;

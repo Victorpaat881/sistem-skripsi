@@ -1,0 +1,18 @@
+BEGIN
+    DECLARE sisa_stok_sebelumnya INT;
+    DECLARE bulan_sebelum INT;
+    DECLARE tahun_sebelum INT;
+
+    SET bulan_sebelum = IF(MONTH(NEW.tanggal) = 1, 12, MONTH(NEW.tanggal) - 1);
+    SET tahun_sebelum = IF(MONTH(NEW.tanggal) = 1, YEAR(NEW.tanggal) - 1, YEAR(NEW.tanggal));
+
+    SELECT SISA_STOK INTO sisa_stok_sebelumnya
+    FROM lplpo
+    WHERE NAMA_OBAT = NEW.NAMA_OBAT AND MONTH(tanggal) = bulan_sebelum AND YEAR(tanggal) = tahun_sebelum
+    ORDER BY tanggal DESC
+    LIMIT 1;
+
+    IF sisa_stok_sebelumnya IS NOT NULL THEN
+        SET NEW.STOK_AWAL = sisa_stok_sebelumnya;
+    END IF;
+END
